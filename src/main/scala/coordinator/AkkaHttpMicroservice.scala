@@ -129,19 +129,19 @@ trait Service extends Protocols {
           complete {
             val fbProfile = getFbProfile(calendarArgs.fb_token)
             fbProfile.map({ fbProfile =>
-                logger.info(s"--------- Result from Facebok profile endpoint: $fbProfile")
+                // logger.info(s"--------- Result from Facebok profile endpoint: $fbProfile")
                 val meetupProfile = "meetupProfile"
                 val fbEvents = getFbEvents(calendarArgs.fb_token, fbProfile, meetupProfile, calendarArgs.city, calendarArgs.date_from, calendarArgs.date_to)
                 fbEvents.map({ events =>
-                  logger.info(s"---------- Result from Facebok events endpoint: $events")
+                  // logger.info(s"---------- Result from Facebok events endpoint: $events")
                 })
 
                 val meetupEvents = getMeetupEvents(calendarArgs.meetup_id)
                 meetupEvents.map({ events =>
-                  logger.info(s"---------- Result from meetup events endpoint: $events")
+                  // logger.info(s"---------- Result from meetup events endpoint: $events")
                 })
 
-                calendarArgs.toString
+                meetupEvents
             })
 //            val ip1InfoFuture = fetchIpInfo(ipPairSummaryRequest.ip1)
 //            val ip2InfoFuture = fetchIpInfo(ipPairSummaryRequest.ip2)
