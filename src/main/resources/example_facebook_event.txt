@@ -1,0 +1,37 @@
+{
+  "description": "New year, new exciting events from ScalaWAW!
+
+We start with long-awaited and widely-announced microservices hackathon. During the meetup we are going to split into several teams and implement some independent but cooperating services that form a simple yet useful system. Check out details here: https://docs.google.com/document/d/1AGfyTCOpWxm_eOpVpTAJEuhf556NUJ_OmkRR_C98ZVY/edit# and after RSVP remember to sign up for a team on the last pages of this document. We're very open to any suggestions regarding subject, approach, architecture or team layout - just leave comments in the document or under this Meetup event.
+
+Disclaimer: system is intended to be very simple and communicate in the most straightforward way. Depending on how you like it, we may devote another two or three meetups to extending architecture with some cool stuff as real deployment techniques, service discovery, message queues and so on.
+
+Agenda:
+18.00 - greetings and introduction
+18.15 - briefing for teams
+18.30 - hacking starts
+20.00 - sanity check #1
+21.00 - sanity check #2
+21.30 - system testing begins
+
+We're going to use Gitter as an official meetup communicator, so be sure to join it: https://gitter.im/scalawaw/scalawaw
+
+We're still unsure about location but we're about to get a very cool venue. In case of problems, our fallback option will be good old Jaś i Małgosia, Jana Pawła II, 57.
+
+The event will be held in English, or if no non-Polish speaking attendees register in Polish.
+
+If you have any questions - drop us a line, we’ll help you out!",
+  "name": "ScalaWAW #4 - microservices hackathon",
+  "place": {
+    "name": "Jaś & Małgosia. Kawiarnia z innej bajki",
+    "location": {
+      "city": "Warsaw",
+      "country": "Poland",
+      "latitude": 52.24676046,
+      "longitude": 20.98875022,
+      "street": "Jana Pawła II 57"
+    },
+    "id": "172853546060014"
+  },
+  "start_time": "2016-02-04T18:00:00+0100",
+  "id": "417308148477462"
+}
