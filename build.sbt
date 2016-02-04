@@ -1,4 +1,4 @@
-//enablePlugins(JavaAppPackaging)
+enablePlugins(JavaAppPackaging)
 
 name         := "akka-http-microservice"
 organization := "com.theiterators"
@@ -22,4 +22,4 @@ libraryDependencies ++= {
   )
 }
 
-//Revolver.settings
+Revolver.settings
