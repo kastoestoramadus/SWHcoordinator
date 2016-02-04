@@ -87,8 +87,11 @@ trait Service extends Protocols {
     ???
   }
 
-  def getFbEvents(fbToken: String): Future[String] = {
-    ???
+  def getFbEvents(fbToken: String, fbProfile: String, meetupProfile: String, city: String, dateFrom: String, dateTo: String): Future[String] = {
+    val request = RequestBuilding.Get(s"/events?fb_token=$fbToken&fb_profile=$fbProfile&meetup_profile=$meetupProfile&city=$city&date_from=$dateFrom&date_to=$dateTo")
+    issueRequest(facebookEndpointRequest, request).flatMap({ response =>
+      Unmarshal(response).to[String]
+    })
   }
 
   def getMeetupEvents(fbToken: String): Future[String] = {
@@ -111,12 +114,17 @@ trait Service extends Protocols {
       pathPrefix("calendar") {
         (post & entity(as[CalendarArgs])) { calendarArgs =>
           complete {
-              val fbProfile = getFbProfile(calendarArgs.fb_token)
-              fbProfile.map({ result =>
-                  logger.info(s"Result from Facebok endpoint: $result");
+            val fbProfile = getFbProfile(calendarArgs.fb_token)
+            fbProfile.map({ fbProfile =>
+                logger.info(s"--------- Result from Facebok profile endpoint: $fbProfile")
+                val meetupProfile = "meetupProfile"
+                val fbEvents = getFbEvents(calendarArgs.fb_token, fbProfile, meetupProfile, calendarArgs.city, calendarArgs.date_from, calendarArgs.date_to)
+                fbEvents.map({ events =>
+                  logger.info(s"---------- Result from Facebok events endpoint: $events")
+                })
 
-                  calendarArgs.toString
-              })
+                calendarArgs.toString
+            })
 //            val ip1InfoFuture = fetchIpInfo(ipPairSummaryRequest.ip1)
 //            val ip2InfoFuture = fetchIpInfo(ipPairSummaryRequest.ip2)
 //            ip1InfoFuture.zip(ip2InfoFuture).map[ToResponseMarshallable] {
