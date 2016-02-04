@@ -7,6 +7,7 @@ import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.{ResponseEntity, HttpRequest, HttpResponse}
 import akka.http.scaladsl.server.Directives._
@@ -17,6 +18,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import spray.json.DefaultJsonProtocol
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.io
 import scala.math._
 
 case class IpInfo(ip: String, country_name: Option[String], city: Option[String], latitude: Option[Double], longitude: Option[Double])
@@ -95,10 +97,15 @@ trait Service extends Protocols {
   }
 
   def getFbEvents(fbToken: String, fbProfile: String, meetupProfile: String, city: String, dateFrom: String, dateTo: String): Future[String] = {
-    val request = RequestBuilding.Get(s"/events?fb_token=$fbToken&fb_profile=$fbProfile&meetup_profile=$meetupProfile&city=$city&date_from=$dateFrom&date_to=$dateTo")
-    issueRequest(facebookEndpointRequest, request, "fb events").flatMap({ response =>
-      Unmarshal(response).to[String]
-    })
+//    val request = RequestBuilding.Get(s"/events?fb_token=$fbToken&fb_profile=$fbProfile&meetup_profile=$meetupProfile&city=$city&date_from=$dateFrom&date_to=$dateTo")
+//    issueRequest(facebookEndpointRequest, request, "fb events").flatMap({ response =>
+//      Unmarshal(response).to[String]
+//    })
+    Future(getStubFbEvent)
+  }
+
+  def getStubFbEvent = {
+    io.Source.fromURL(AkkaHttpMicroservice.getClass.getResource("example_facebook_event.txt")).getLines.reduce(_ + _)
   }
 
   def getMeetupEvents(meetupId: String): Future[String] = {
@@ -126,27 +133,27 @@ trait Service extends Protocols {
     pathPrefix("calendar") {
       (post & entity(as[CalendarArgs])) { calendarArgs =>
         complete {
-          val fbProfile = getFbProfile(calendarArgs.fb_token)
-          fbProfile.map({ fbProfile =>
-            // logger.info(s"--------- Result from Facebok profile endpoint: $fbProfile")
-            val meetupProfile = "meetupProfile"
-            val fbEvents = getFbEvents(calendarArgs.fb_token, fbProfile, meetupProfile, calendarArgs.city, calendarArgs.date_from, calendarArgs.date_to)
-            fbEvents.map({ events =>
-              // logger.info(s"---------- Result from Facebok events endpoint: $events")
-            })
+          val fbProfileFut = getFbProfile(calendarArgs.fb_token)
+          val meetupProfileFut = getMeetupProfile(calendarArgs.meetup_id)
 
-            val meetupEvents = getMeetupEvents(calendarArgs.meetup_id)
-            meetupEvents.map({ events =>
-              // logger.info(s"---------- Result from meetup events endpoint: $events")
-            })
+          fbProfileFut.zip(meetupProfileFut).map { case ((fbProfile, meetupProfile)) =>
+            val fbEventsFut = getFbEvents(calendarArgs.fb_token, fbProfile, meetupProfile, calendarArgs.city, calendarArgs.date_from, calendarArgs.date_to)
+            val meetupEventsFut = getMeetupEvents(calendarArgs.meetup_id)
 
-            meetupEvents
-          })
+            for {
+              fbEvents <- fbEventsFut
+              meetupEvents <- meetupEventsFut
+            } yield {
+              fbEvents + meetupEvents
+            }
+          }
         }
       }
     }
   }
 }
+
+case class Events(fb_events: String, meetup_events: String)
 
 object AkkaHttpMicroservice extends App with Service {
   override implicit val system = ActorSystem()
