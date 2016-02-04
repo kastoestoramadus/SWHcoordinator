@@ -75,13 +75,10 @@ trait Service extends Protocols {
     getResponseAction(request).map { response =>
       response.status match {
         case OK => response.entity
-
-        // case BadRequest => Future[ResponseEntity].failed(new Exception("Bad Request"))
-        /* case _ => Unmarshal(response.entity).to[String].flatMap { entity =>
-          val error = s"Request failed with status code ${response.status} and entity $entity"
-          logger.error(error)
-          Future.failed(new IOException(error))
-        }*/
+        case _ =>
+          val msg = s"Request failed with status ${response.status}"
+          logger.error(msg)
+          throw new Exception(msg)
       }
     }
   }
