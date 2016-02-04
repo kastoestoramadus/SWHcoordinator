@@ -101,8 +101,8 @@ trait Service extends Protocols {
     })
   }
 
-  def getMeetupEvents(meetupId: String): Future[String] = {
-    val request = RequestBuilding.Get(s"/events")
+  def getMeetupEvents(city: String, since: String, to: String): Future[String] = {
+    val request = RequestBuilding.Get(s"/events?city=$city&since=$since&to=$to")
     issueRequest(meetupEndpointRequest, request, "meetup events").flatMap({ response =>
       Unmarshal(response).to[String]
     })
@@ -118,7 +118,8 @@ trait Service extends Protocols {
   def getFbProfile(fbToken: String): Future[String] = {
     val request = RequestBuilding.Get(s"/profile?fb_token=$fbToken")
     issueRequest(facebookEndpointRequest, request, "fb profile").flatMap({ response =>
-      Unmarshal(response).to[String]
+      val result = Unmarshal(response).to[String]
+      result.map(_.replaceAll("\\n", ""))
     })
   }
 
@@ -128,14 +129,14 @@ trait Service extends Protocols {
         complete {
           val fbProfile = getFbProfile(calendarArgs.fb_token)
           fbProfile.map({ fbProfile =>
-            // logger.info(s"--------- Result from Facebok profile endpoint: $fbProfile")
+            logger.info(s"--------- Result from Facebok profile endpoint: $fbProfile")
             val meetupProfile = "meetupProfile"
-            val fbEvents = getFbEvents(calendarArgs.fb_token, fbProfile, meetupProfile, calendarArgs.city, calendarArgs.date_from, calendarArgs.date_to)
+            /* val fbEvents = getFbEvents(calendarArgs.fb_token, fbProfile, meetupProfile, calendarArgs.city, calendarArgs.date_from, calendarArgs.date_to)
             fbEvents.map({ events =>
-              // logger.info(s"---------- Result from Facebok events endpoint: $events")
-            })
+               logger.info(s"---------- Result from Facebok events endpoint: $events")
+            })*/
 
-            val meetupEvents = getMeetupEvents(calendarArgs.meetup_id)
+            val meetupEvents = getMeetupEvents(calendarArgs.city, calendarArgs.date_from, calendarArgs.date_to)
             meetupEvents.map({ events =>
               // logger.info(s"---------- Result from meetup events endpoint: $events")
             })
