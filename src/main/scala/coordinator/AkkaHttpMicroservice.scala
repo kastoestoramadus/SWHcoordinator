@@ -63,13 +63,19 @@ trait Service extends Protocols {
   lazy val freeGeoIpConnectionFlow: Flow[HttpRequest, HttpResponse, Any] =
     Http().outgoingConnection(config.getString("services.freeGeoIpHost"), config.getInt("services.freeGeoIpPort"))
 
+  lazy val facebookConnectionFlow: Flow[HttpRequest, HttpResponse, Any] =
+    Http().outgoingConnection(config.getString("services.facebookEndpointIp"), config.getInt("services.facebookEndpointPort"))
+
+  import MyJsonProtocol.calendarArgsFormat
+
+  def facebookEndpointRequest(request: HttpRequest): Future[HttpResponse] = Source.single(request).via(facebookConnectionFlow).runWith(Sink.head)
   def freeGeoIpRequest(request: HttpRequest): Future[HttpResponse] = Source.single(request).via(freeGeoIpConnectionFlow).runWith(Sink.head)
 
-  def fetchIpInfo(ip: String): Future[Either[String, IpInfo]] = {
-    freeGeoIpRequest(RequestBuilding.Get(s"/json/$ip")).flatMap { response =>
+  def issueRequest(getResponseAction: Function[HttpRequest, Future[HttpResponse]], request: HttpRequest): Future[Either[String, String]] = {
+    getResponseAction(request).flatMap { response =>
       response.status match {
-        case OK => Unmarshal(response.entity).to[IpInfo].map(Right(_))
-        case BadRequest => Future.successful(Left(s"$ip: incorrect IP format"))
+        case OK => Unmarshal(response.entity).to[String].map(Right(_))
+        case BadRequest => Future.successful(Left(s"Bad Request"))
         case _ => Unmarshal(response.entity).to[String].flatMap { entity =>
           val error = s"FreeGeoIP request failed with status code ${response.status} and entity $entity"
           logger.error(error)
@@ -78,14 +84,22 @@ trait Service extends Protocols {
       }
     }
   }
-  import MyJsonProtocol.calendarArgsFormat
+
+  def getFbProfile(fbToken: String): Future[Either[String, String]] = {
+    val request = RequestBuilding.Get(s"/profile?fb_token=$fbToken")
+    issueRequest(facebookEndpointRequest, request)
+  }
 
   val routes = {
     logRequestResult("akka-http-microservice") {
       pathPrefix("calendar") {
         (post & entity(as[CalendarArgs])) { calendarArgs =>
           complete {
-              calendarArgs.toString
+              val fbProfile = getFbProfile(calendarArgs.fb_token)
+              fbProfile.map({
+                case Right(result) => logger.info(s"Result from Facebok endpoint: $result"); calendarArgs.toString
+                case Left(errorMessage) => s"Error calling Facebook endpoint: $errorMessage"
+              })
 //            val ip1InfoFuture = fetchIpInfo(ipPairSummaryRequest.ip1)
 //            val ip2InfoFuture = fetchIpInfo(ipPairSummaryRequest.ip2)
 //            ip1InfoFuture.zip(ip2InfoFuture).map[ToResponseMarshallable] {
