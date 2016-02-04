@@ -91,13 +91,16 @@ trait Service extends Protocols {
     ???
   }
 
-  def getMeetupEvents(fbToken: String): Future[String] = {
+  def getMeetupEvents(meetupId: String): Future[String] = {
     ???
   }
 
-  def getClassifiedEvents(fbToken: String): Future[String] = {
+  def getClassifiedEvents(meetupProfile: String): Future[String] = {
     ???
   }
+
+  case class MeetupProfile(meetup_profile: String)
+  case class FacebookProfile(fb_profile: String)
 
   def getFbProfile(fbToken: String): Future[String] = {
     val request = RequestBuilding.Get(s"/profile?fb_token=$fbToken")
