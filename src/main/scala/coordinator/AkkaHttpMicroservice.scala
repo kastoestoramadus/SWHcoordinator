@@ -101,16 +101,19 @@ trait Service extends Protocols {
     })
   }
 
-  def getMeetupEvents(): Future[String] = {
+  def getMeetupEvents(meetupId: String): Future[String] = {
     val request = RequestBuilding.Get(s"/events")
     issueRequest(meetupEndpointRequest, request, "meetup events").flatMap({ response =>
       Unmarshal(response).to[String]
     })
   }
 
-  def getClassifiedEvents(fbToken: String): Future[String] = {
+  def getClassifiedEvents(meetupProfile: String): Future[String] = {
     ???
   }
+
+  case class MeetupProfile(meetup_profile: String)
+  case class FacebookProfile(fb_profile: String)
 
   def getFbProfile(fbToken: String): Future[String] = {
     val request = RequestBuilding.Get(s"/profile?fb_token=$fbToken")
@@ -133,7 +136,7 @@ trait Service extends Protocols {
                   logger.info(s"---------- Result from Facebok events endpoint: $events")
                 })
 
-                val meetupEvents = getMeetupEvents()
+                val meetupEvents = getMeetupEvents(calendarArgs.meetup_id)
                 meetupEvents.map({ events =>
                   logger.info(s"---------- Result from meetup events endpoint: $events")
                 })
