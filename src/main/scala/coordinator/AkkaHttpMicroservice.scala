@@ -8,7 +8,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.StatusCodes._
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{ResponseEntity, HttpRequest, HttpResponse}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Flow, Sink, Source}
@@ -71,23 +71,42 @@ trait Service extends Protocols {
   def facebookEndpointRequest(request: HttpRequest): Future[HttpResponse] = Source.single(request).via(facebookConnectionFlow).runWith(Sink.head)
   def freeGeoIpRequest(request: HttpRequest): Future[HttpResponse] = Source.single(request).via(freeGeoIpConnectionFlow).runWith(Sink.head)
 
-  def issueRequest(getResponseAction: Function[HttpRequest, Future[HttpResponse]], request: HttpRequest): Future[Either[String, String]] = {
-    getResponseAction(request).flatMap { response =>
+  def issueRequest(getResponseAction: Function[HttpRequest, Future[HttpResponse]], request: HttpRequest): Future[ResponseEntity] = {
+    getResponseAction(request).map { response =>
       response.status match {
-        case OK => Unmarshal(response.entity).to[String].map(Right(_))
-        case BadRequest => Future.successful(Left(s"Bad Request"))
-        case _ => Unmarshal(response.entity).to[String].flatMap { entity =>
-          val error = s"FreeGeoIP request failed with status code ${response.status} and entity $entity"
+        case OK => response.entity
+
+        // case BadRequest => Future[ResponseEntity].failed(new Exception("Bad Request"))
+        /* case _ => Unmarshal(response.entity).to[String].flatMap { entity =>
+          val error = s"Request failed with status code ${response.status} and entity $entity"
           logger.error(error)
           Future.failed(new IOException(error))
-        }
+        }*/
       }
     }
   }
 
-  def getFbProfile(fbToken: String): Future[Either[String, String]] = {
+  def getMeetupProfile(fbToken: String): Future[String] = {
+    ???
+  }
+
+  def getFbEvents(fbToken: String): Future[String] = {
+    ???
+  }
+
+  def getMeetupEvents(fbToken: String): Future[String] = {
+    ???
+  }
+
+  def getClassifiedEvents(fbToken: String): Future[String] = {
+    ???
+  }
+
+  def getFbProfile(fbToken: String): Future[String] = {
     val request = RequestBuilding.Get(s"/profile?fb_token=$fbToken")
-    issueRequest(facebookEndpointRequest, request)
+    issueRequest(facebookEndpointRequest, request).flatMap({ response =>
+      Unmarshal(response).to[String]
+    })
   }
 
   val routes = {
@@ -96,9 +115,10 @@ trait Service extends Protocols {
         (post & entity(as[CalendarArgs])) { calendarArgs =>
           complete {
               val fbProfile = getFbProfile(calendarArgs.fb_token)
-              fbProfile.map({
-                case Right(result) => logger.info(s"Result from Facebok endpoint: $result"); calendarArgs.toString
-                case Left(errorMessage) => s"Error calling Facebook endpoint: $errorMessage"
+              fbProfile.map({ result =>
+                  logger.info(s"Result from Facebok endpoint: $result");
+
+                  calendarArgs.toString
               })
 //            val ip1InfoFuture = fetchIpInfo(ipPairSummaryRequest.ip1)
 //            val ip2InfoFuture = fetchIpInfo(ipPairSummaryRequest.ip2)
