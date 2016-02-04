@@ -63,20 +63,24 @@ trait Service extends Protocols {
   lazy val freeGeoIpConnectionFlow: Flow[HttpRequest, HttpResponse, Any] =
     Http().outgoingConnection(config.getString("services.freeGeoIpHost"), config.getInt("services.freeGeoIpPort"))
 
+  lazy val meetupConnectionFlow: Flow[HttpRequest, HttpResponse, Any] =
+    Http().outgoingConnection(config.getString("services.meetupEndpointHost"), config.getInt("services.meetupEndpointPort"))
+
   lazy val facebookConnectionFlow: Flow[HttpRequest, HttpResponse, Any] =
-    Http().outgoingConnection(config.getString("services.facebookEndpointIp"), config.getInt("services.facebookEndpointPort"))
+    Http().outgoingConnection(config.getString("services.facebookEndpointHost"), config.getInt("services.facebookEndpointPort"))
 
   import MyJsonProtocol.calendarArgsFormat
 
+  def meetupEndpointRequest(request: HttpRequest): Future[HttpResponse] = Source.single(request).via(meetupConnectionFlow).runWith(Sink.head)
   def facebookEndpointRequest(request: HttpRequest): Future[HttpResponse] = Source.single(request).via(facebookConnectionFlow).runWith(Sink.head)
   def freeGeoIpRequest(request: HttpRequest): Future[HttpResponse] = Source.single(request).via(freeGeoIpConnectionFlow).runWith(Sink.head)
 
-  def issueRequest(getResponseAction: Function[HttpRequest, Future[HttpResponse]], request: HttpRequest): Future[ResponseEntity] = {
+  def issueRequest(getResponseAction: Function[HttpRequest, Future[HttpResponse]], request: HttpRequest, info: String): Future[ResponseEntity] = {
     getResponseAction(request).map { response =>
       response.status match {
         case OK => response.entity
         case _ =>
-          val msg = s"Request failed with status ${response.status}"
+          val msg = s"Request to $info failed with status ${response.status}"
           logger.error(msg)
           throw new Exception(msg)
       }
@@ -84,18 +88,24 @@ trait Service extends Protocols {
   }
 
   def getMeetupProfile(fbToken: String): Future[String] = {
-    ???
-  }
-
-  def getFbEvents(fbToken: String, fbProfile: String, meetupProfile: String, city: String, dateFrom: String, dateTo: String): Future[String] = {
-    val request = RequestBuilding.Get(s"/events?fb_token=$fbToken&fb_profile=$fbProfile&meetup_profile=$meetupProfile&city=$city&date_from=$dateFrom&date_to=$dateTo")
-    issueRequest(facebookEndpointRequest, request).flatMap({ response =>
+    val request = RequestBuilding.Get(s"/profile?meetup_id=$fbToken")
+    issueRequest(facebookEndpointRequest, request, "meetup profile").flatMap({ response =>
       Unmarshal(response).to[String]
     })
   }
 
-  def getMeetupEvents(fbToken: String): Future[String] = {
-    ???
+  def getFbEvents(fbToken: String, fbProfile: String, meetupProfile: String, city: String, dateFrom: String, dateTo: String): Future[String] = {
+    val request = RequestBuilding.Get(s"/events?fb_token=$fbToken&fb_profile=$fbProfile&meetup_profile=$meetupProfile&city=$city&date_from=$dateFrom&date_to=$dateTo")
+    issueRequest(facebookEndpointRequest, request, "fb events").flatMap({ response =>
+      Unmarshal(response).to[String]
+    })
+  }
+
+  def getMeetupEvents(): Future[String] = {
+    val request = RequestBuilding.Get(s"/events")
+    issueRequest(meetupEndpointRequest, request, "meetup events").flatMap({ response =>
+      Unmarshal(response).to[String]
+    })
   }
 
   def getClassifiedEvents(fbToken: String): Future[String] = {
@@ -104,7 +114,7 @@ trait Service extends Protocols {
 
   def getFbProfile(fbToken: String): Future[String] = {
     val request = RequestBuilding.Get(s"/profile?fb_token=$fbToken")
-    issueRequest(facebookEndpointRequest, request).flatMap({ response =>
+    issueRequest(facebookEndpointRequest, request, "fb profile").flatMap({ response =>
       Unmarshal(response).to[String]
     })
   }
@@ -121,6 +131,11 @@ trait Service extends Protocols {
                 val fbEvents = getFbEvents(calendarArgs.fb_token, fbProfile, meetupProfile, calendarArgs.city, calendarArgs.date_from, calendarArgs.date_to)
                 fbEvents.map({ events =>
                   logger.info(s"---------- Result from Facebok events endpoint: $events")
+                })
+
+                val meetupEvents = getMeetupEvents()
+                meetupEvents.map({ events =>
+                  logger.info(s"---------- Result from meetup events endpoint: $events")
                 })
 
                 calendarArgs.toString
